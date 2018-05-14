@@ -37,7 +37,7 @@ vector<double> Particle::getCoordinates(){
 }
 Particle::Particle(int nCoordinates){
     for (int i = 0; i < nCoordinates; i++)
-        alpha.push_back(rand()% 150000000/100000000.0 );
+        alpha.push_back((double)rand()/RAND_MAX*1.5);
 }
 Particle::Particle(){};
 void Particle::Show(){
@@ -131,8 +131,7 @@ double d(Particle P){
 }
 int main(int argc, const char * argv[]) {
     const int nParticle = 50 ;
-    const int nCoordinates = 7
-    ;
+    const int nCoordinates = 7;
     srand((unsigned int)time(0));
 begin:
     cout << "Создание роя: \n";
@@ -143,7 +142,7 @@ begin:
         vector<double> tmp(nCoordinates);
         for (int j=0;j<nCoordinates;j++){
             
-            tmp.at(j) =rand()% 157079632/100000000.0; //Координаты точек
+            tmp.at(j) =(double)rand()/RAND_MAX*M_PI/2;
         }
         Part[i] = *new Particle(tmp);
         best[i] = Part[i];
@@ -151,7 +150,7 @@ begin:
         Part[i].Show();
     }
     cout<<endl;
-    double K0 = 0.001;
+    double K0 = 0.4;
     const double K1 = 1.5, K2(1.5);
     vector<double> tmp(nCoordinates,0);
     Particle deltaX(tmp);
@@ -164,13 +163,16 @@ begin:
     cout<<"GreatBest "<<endl;
     greatBestParticle.Show();
     int nIteration = 0;
-    int nSmena = 0;
+    int nSmena = 0, nNullDelta = 0;
      bool once = true;
     do {
         cout<<"Итерация №"<<nIteration+1<<endl;
         for (int i=0; i<nParticle; i++) { //Particles
             Particle P(nCoordinates), q(nCoordinates);
             deltaX = (deltaXPrevious[i] * K0) + (P*(best[i]-Part[i])) * K1+(q*(greatBestParticle - Part[i]))*K2;
+            if (deltaX == 0.0){
+                nNullDelta++;
+            }
             Part[i] = Part[i] + deltaX;
             deltaXPrevious[i] = deltaX;
             for (int j = 0; j < Part[i].getCoordinates().size(); j++) {
@@ -206,19 +208,19 @@ begin:
         }
         nIteration++;
         nSmena++;
-//        if (nIteration == 3)
-//            K0 = 0.6;
-//        if (nIteration == 6)
-//            K0 = 0.2;
-        cout<<"D(Great) "<<d(greatBestParticle)<<endl;
-        if ((nSmena>10)&&(deltaX == 0.0))
-            break;
+        if (nIteration == 3)
+            K0 = 0.6;
+        if (nIteration == 6)
+            K0 = 0.9;
 //        if (nIteration == 10)
-//            break;
+//            K0 = 1.1;
+        cout<<"D(Great) "<<d(greatBestParticle)<<endl;
+        if ((nSmena>=5*nCoordinates)&&(nNullDelta >= nCoordinates))
+            break;
     } while (d(greatBestParticle)>pow(10, -6)); //iteration
-    if (nSmena>10){
+    if ((nSmena>=5*nCoordinates)&&(nNullDelta >= 5*nCoordinates)){
         cout<<"Частицы сошлись воедино\nSorry Начать сначала";
-        getchar();
+//        getchar();
         goto begin;
     }
    
