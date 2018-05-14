@@ -9,5 +9,6 @@
 #ifndef draw_h
 #define draw_h
 
+class Graphics
 
 #endif /* draw_h */

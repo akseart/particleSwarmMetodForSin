@@ -40,6 +40,9 @@ public:
     Particle greatBest();
     void iteration();
     void drawParticle();
+    void drawGreatBest(){greatBestParticle.draw();}
+    Particle getGreatBest(){return greatBestParticle;}
+    int getIteration(){return nIteration;};
 };
 double d(Particle P);
 const bool operator== (Particle P1, Particle P2);
@@ -90,8 +93,15 @@ void display()
 {
     glClear(GL_COLOR_BUFFER_BIT);
     plot(sin, -25, 25);
-    s1.drawParticle();
-//    s1.iteration();
+    if ((s1.getIteration()<1)||(d(s1.getGreatBest())>pow(10, -12))){
+        s1.drawParticle();
+        s1.iteration();
+        cout<<"2";
+    }
+    else{
+        cout<<"1";
+        s1.drawGreatBest();
+    }
     glutSwapBuffers();
 };
 void timer(int A){
@@ -122,6 +132,7 @@ Swarm::Swarm(int nCoordinates, int nParticle){
         cout<<"Частица №"<<i<<endl;
         Part[i].Show();
     }
+    greatBestParticle=(*new Particle(nCoordinates));
 }
 Particle Swarm::greatBest(){
     return greatBestParticle;
@@ -138,7 +149,6 @@ void Swarm::iteration(){
     int nCoordinates = (int) Part.at(0).getCoordinates().size();
     vector<double> tmp(nCoordinates,0);
     Particle deltaX(tmp);
-    Particle greatBestParticle(tmp);
     for (int i = 0; i<nParticle; i++){
         if (d(Part[i]) < d(greatBestParticle)){
             greatBestParticle = Part[i];
