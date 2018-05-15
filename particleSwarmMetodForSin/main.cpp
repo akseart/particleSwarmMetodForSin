@@ -3,6 +3,7 @@
 #include <cmath>
 #include <GLUT/GLUT.h>
 #include <time.h>
+#include <unistd.h>
 using namespace std;
 
 class Particle{
@@ -22,6 +23,19 @@ public:
     void Show();
     void draw();
 };
+class Swarm{
+private:
+    vector<Particle> Part,best,deltaXPrevious;
+    Particle greatBestParticle;
+    int nIteration;
+    int nSmena, nNullDelta;
+    double K0, K1, K2;
+public:
+    Swarm(int nCoordinates, int nParticle);
+    int iteration();
+    Particle getGreatBest(){return greatBestParticle;};
+    int getNIteration(){return nIteration;};
+};
 const bool operator== (Particle P, double p);
 const bool operator== (double p, Particle P);
 const bool operator== (Particle P1, Particle P2);
@@ -29,38 +43,25 @@ const bool operator!= (Particle P1, Particle P2);
 const bool operator< (Particle P1, double p);
 const bool operator> (Particle P1, double p);
 double d(Particle P);
-class Swarm{
-private:
-    vector<Particle> Part;
-    vector<Particle> best,deltaXPrevious;
-    Particle greatBestParticle;
-    int nIteration;
-public:
-    Particle getGreatBest(){return greatBestParticle;};
-    Swarm(vector<Particle>);
-    Swarm(int,int);
-    Particle greatBest();
-    void iteration();
-    void drawParticle();
-};
-const int nParticle = 3;
-const int nCoordinates = 3;
-Swarm s1 = Swarm(nCoordinates, nParticle);
-void drawFunc(double (*)(double), double, double);
+const int nParticle = 100000 ;
+const int nCoordinates = 7;
 void display();
 void timer(int);
-int cnt =0;
-
+void plot(double(*) (double), double, double);
+Swarm s1(nCoordinates, nParticle);
 int main(int argc, const char * argv[]) {
+    
     srand((unsigned int)time(0));
+//    cout<<M_PI/2;
+//    getchar();
     
     glutInitDisplayMode(GLUT_RGB);
-    glutInitWindowSize(500, 300);
+    glutInitWindowSize(700, 300);
     glutCreateWindow("Рой");
     
     glClearColor(0.2, 0.2, 0.2, 1);
     glClear(GL_COLOR_BUFFER_BIT);
-    glOrtho(-M_PI, M_PI, -2, 2, 0, 1);
+    glOrtho(-M_PI/2, M_PI, -2, 2, 0, 1);
     
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
@@ -70,15 +71,12 @@ int main(int argc, const char * argv[]) {
     glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
     
     glutDisplayFunc(display);
-//    glutIdleFunc(display);
-    glutTimerFunc(10, timer, 0);
+    glutTimerFunc(1, timer, 0);
     glutMainLoop();
     
     return 0;
 }
-
-void plot(double (*f) (double),double a, double b)
-{
+void plot(double (*f) (double),double a, double b){
     glColor3f(1, 0, 0);
     glBegin(GL_LINE_STRIP);
     for (double i = a; i < b; i += 0.01)
@@ -98,68 +96,70 @@ void plot(double (*f) (double),double a, double b)
     glVertex2d(M_PI/2,2);
     glEnd();
     glDisable(GL_LINE_STIPPLE);
-
+    
 }
 void display()
 {
     glClear(GL_COLOR_BUFFER_BIT);
     plot(sin, -M_PI, M_PI);
-    //s1.drawParticle();
-    glColor3b(115, 0, 115);
     s1.getGreatBest().draw();
-    s1.iteration();
-    cnt++;
+    if (d(s1.getGreatBest())>pow(10,-6)){
+        if (s1.iteration() == 10){
+            s1 = Swarm(nCoordinates,nParticle);
+        }
+    }else{
+        cout<<"Результат :"<<s1.getNIteration()<<" ";
+        s1.getGreatBest().Show();
+        getchar();
+    }
     glutSwapBuffers();
+//    sleep(0.25);
 };
 void timer(int A)
 {
     glutPostRedisplay();
     if (d(s1.getGreatBest())>pow(10,-6))
-        glutTimerFunc(200, timer, A++);
-}
-Swarm::Swarm(vector<Particle> TMP){
-    Part = TMP;
-    nIteration = 0;
+        glutTimerFunc(20, timer, 0);
 }
 Swarm::Swarm(int nCoordinates, int nParticle){
     cout << "Создание роя: \n";
-    for (int i=0; i<nParticle; i++){ //Создание роя
+    
+    for (int i=0; i< nParticle; i++){
         vector<double> tmp(nCoordinates);
         for (int j=0;j<nCoordinates;j++){
-            tmp.at(j) = (double)rand()/RAND_MAX*M_PI/2;
+            
+            tmp.at(j) =(double)rand()/RAND_MAX*M_PI/2;
         }
         Part.push_back(*new Particle(tmp));
-        best.push_back(*new Particle(tmp));
+        best.push_back(Part[i]);
         deltaXPrevious.push_back(*new Particle(nCoordinates));
-        cout<<"Частица №"<<i<<endl;
         Part[i].Show();
     }
-    nIteration = 0;
-}
-Particle Swarm::greatBest(){
-    return greatBestParticle;
-}
-void Swarm::iteration(){
-    cout<<"Итерация №"<<nIteration+1<<endl;
-    double K0 = 0.9,K1=1,K2=1;
-    if (nIteration == 3)
-        K0 = 0.6;
-    if (nIteration == 6)
-        K0 = 0.2;
-    bool once = true;
-    int nParticle = (int) Part.size();
-    int nCoordinates = (int) Part.at(0).getCoordinates().size();
-    vector<double> tmp(nCoordinates,0);
-    Particle deltaX(tmp);
-    Particle greatBestParticle(tmp);
+    greatBestParticle = Part[0];
     for (int i = 0; i<nParticle; i++){
         if (d(Part[i]) < d(greatBestParticle)){
             greatBestParticle = Part[i];
         }
     }
+    cout<<"GreatBest "<<endl;
+    greatBestParticle.Show();
+    cout<<endl;
+    nIteration = 0;
+    nSmena = 0;
+    nNullDelta = 0;
+    K0 = 0.9; K1 = 1.9; K2 = 1.9;
+}
+
+int Swarm::iteration(){
+    vector<double> tmp(nCoordinates,0);
+    Particle deltaX(tmp);
+    cout<<"Итерация № \007"<<nIteration+1<<endl;
     for (int i=0; i<nParticle; i++) { //Particles
-        Particle P(nParticle), q(nParticle);
-        deltaX = (deltaXPrevious[i] * K0) + (P*(best[i]-Part[i]))*K1 + (q*(greatBestParticle - Part[i]))*K2;
+        Particle P(nCoordinates), q(nCoordinates);
+        deltaX = (deltaXPrevious[i] * K0) + (P*(best[i]-Part[i])) * K1+(q*(greatBestParticle - Part[i]))*K2;
+        if (deltaX == 0.0){
+            nNullDelta++;
+        }
         Part[i] = Part[i] + deltaX;
         deltaXPrevious[i] = deltaX;
         for (int j = 0; j < Part[i].getCoordinates().size(); j++) {
@@ -169,29 +169,47 @@ void Swarm::iteration(){
             if (Part[i].getCoordinate(j) > M_PI/2 ){
                 Part[i].putCoordinate(j, Part[i].getCoordinate(j)-M_PI/2);
             };
+            
         }
         if (d(Part[i]) < d(best[i])){
             best[i] = Part[i];
             cout<<"Смена лучшего"<<endl;
+            nSmena = 0;
         }
         if (d(Part[i]) < d(greatBestParticle)){
             greatBestParticle = Part[i];
             cout<<"Смена самого лучшего"<<endl;
+            nSmena = 0;
         }
         cout<<"Частица №"<<i<<": ";
         Part[i].Show();
-        if ((i > 1)&&(Part[i-1] != Part[i]))
-            once = false;
         cout<<"greatBest: ";
         greatBestParticle.Show();
         cout<<"Best №"<<i<<": ";
         best[i].Show();
-        nIteration++;
-        cout<<"D()="<<d(greatBestParticle)<<endl;
+        cout<<"D(Great) "<<d(greatBestParticle)<<endl;
         cout<<endl;
+        
     }
+    nIteration++;
+    nSmena++;
+//    if (nIteration == 10)
+//        K0 = 0.6;
+//    if (nIteration == 12)
+//        K0 = 0.4;
+    if (d(greatBestParticle)<pow(10,-5 )) {
+        K0 = 0.2;
+    }
+    if (d(greatBestParticle)< 5* pow(10,-6)) {
+        K0 = 0.001;
+    }
+    cout<<"D(Great) "<<d(greatBestParticle)<<endl;
+    cout<<"greatBest: ";
+    greatBestParticle.Show();
+    if ((nSmena>=5*nCoordinates)&&(nNullDelta >= nCoordinates))
+        return 10;
+    return 0;
 }
-
 const bool operator<(Particle P, double p){
     for (int i=0; i<P.getCoordinates().size(); i++) {
         if (!(P.getCoordinate(i) < p)) {
@@ -317,23 +335,6 @@ Particle Particle::operator+(Particle P){
     };
     return Particle(result);
 };
-double d(Particle P){
-    double tmp = 0.0;
-    for (int i=1; i<=P.getCoordinates().size(); i++){
-        double tmp1 = 0.0;
-        for (int j=1; j<=P.getCoordinates().size(); j++){
-            tmp1 += cos((2*i+1) * P.getCoordinate(j-1));
-        }
-        tmp += (tmp1/(2*i+1))*(tmp1/(2*i+1));
-    }
-    return tmp;
-}
-void Swarm::drawParticle(){
-    for (int i = 0; i<Part.size(); i++){
-        glColor3b(i, i, i);
-        Part.at(i).draw();
-    }
-}
 void Particle::draw(){
     for(int i=0;i<alpha.size();i++)
     {
@@ -345,4 +346,16 @@ void Particle::draw(){
         
     }
 }
+double d(Particle P){
+    double tmp = 0.0;
+    for (int i=1; i<=P.getCoordinates().size(); i++){
+        double tmp1 = 0.0;
+        for (int j=1; j<=P.getCoordinates().size(); j++){
+            tmp1 += cos((2*i+1) * P.getCoordinate(j-1));
+        }
+        tmp += (tmp1/(2*i+1))*(tmp1/(2*i+1));
+    }
+    return tmp;
+}
+
 
